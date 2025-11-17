@@ -1,4 +1,4 @@
-name: Vim Security Pipeline
+name: Vim Security Analysis Pipeline
 
 on:
   push:
@@ -19,7 +19,12 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential strace checksec gitleaks clang-tools
+        sudo apt-get install -y build-essential strace checksec clang-tools
+        # Установка gitleaks из GitHub releases
+        wget https://github.com/gitleaks/gitleaks/releases/download/v8.17.1/gitleaks_8.17.1_linux_x64.tar.gz
+        tar -xzf gitleaks_8.17.1_linux_x64.tar.gz
+        sudo mv gitleaks /usr/local/bin/
+        rm gitleaks_8.17.1_linux_x64.tar.gz
         
     - name: Build Vim with strace
       run: |
