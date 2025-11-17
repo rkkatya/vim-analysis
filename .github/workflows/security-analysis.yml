@@ -21,11 +21,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential strace checksec clang-tools
         
-    - name: Install gitleaks
-      run: |
-        sudo apt-get install -y gitleaks
-        
-    - name: Check installed tools
+    - name: Verify installed tools
       run: |
         strace --version
         checksec --version
