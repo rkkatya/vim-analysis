@@ -1,0 +1,54 @@
+name: Vim Security Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-analysis:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential strace checksec gitleaks clang-tools
+        
+    - name: Build Vim with strace
+      run: |
+        cd src
+        ./configure --with-features=huge --enable-gui=none
+        strace -f -e trace=file -o strace_log.txt make -j2
+        
+    - name: Binary hardening check
+      run: |
+        cd src
+        checksec --file=src/vim > checksec_report.txt
+        cat checksec_report.txt
+        
+    - name: Secrets scan
+      run: |
+        cd src
+        gitleaks detect --source . --report-path=../gitleaks-report.json --report-format=json
+        
+    - name: Static analysis with Clang
+      run: |
+        cd src
+        scan-build --status-bugs --all-checkers -o clang-report make -j2
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: analysis-results
+        path: |
+          src/strace_log.txt
+          src/checksec_report.txt
+          gitleaks-report.json
+          src/clang-report/
