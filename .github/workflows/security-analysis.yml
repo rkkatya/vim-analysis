@@ -19,12 +19,22 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential strace checksec clang-tools
-        # Установка gitleaks из GitHub releases
-        wget https://github.com/gitleaks/gitleaks/releases/download/v8.17.1/gitleaks_8.17.1_linux_x64.tar.gz
-        tar -xzf gitleaks_8.17.1_linux_x64.tar.gz
+        sudo apt-get install -y build-essential strace checksec clang-tools curl
+        
+    - name: Install gitleaks
+      run: |
+        # Получаем актуальную версию gitleaks
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        echo "Latest gitleaks version: $LATEST_VERSION"
+        
+        # Скачиваем и устанавливаем gitleaks
+        wget "https://github.com/gitleaks/gitleaks/releases/download/$LATEST_VERSION/gitleaks_${LATEST_VERSION:1}_linux_amd64.tar.gz"
+        tar -xzf "gitleaks_${LATEST_VERSION:1}_linux_amd64.tar.gz"
         sudo mv gitleaks /usr/local/bin/
-        rm gitleaks_8.17.1_linux_x64.tar.gz
+        rm "gitleaks_${LATEST_VERSION:1}_linux_amd64.tar.gz"
+        
+        # Проверяем установку
+        gitleaks version
         
     - name: Build Vim with strace
       run: |
@@ -49,12 +59,16 @@ jobs:
         cd src
         scan-build --status-bugs --all-checkers -o clang-report make -j2
         
+    - name: Prepare artifacts directory
+      run: |
+        mkdir -p analysis-results
+        cp src/strace_log.txt analysis-results/
+        cp src/checksec_report.txt analysis-results/
+        cp gitleaks-report.json analysis-results/
+        cp -r src/clang-report analysis-results/
+        
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: analysis-results
-        path: |
-          src/strace_log.txt
-          src/checksec_report.txt
-          gitleaks-report.json
-          src/clang-report/
+        path: analysis-results/
